@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTS Training Data Search</title>
+  <link rel="stylesheet" href="/styles.css?v=4" />
+</head>
+<body>
+  <header>
+    <h1>HTS training data search</h1>
+    <p class="subtitle">
+      <strong id="total-count">…</strong> records
+      <span id="source-summary"></span>
+      — search by HTS code or product / question text
+    </p>
+    <div class="search-row">
+      <input
+        id="search"
+        type="text"
+        placeholder="e.g. sign, zinc, 8477.10.9015"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <select id="source-filter" title="Dataset filter">
+        <option value="">All datasets</option>
+      </select>
+      <label class="match-toggle" title="Match whole words only (sign matches sign, not design)">
+        <input type="checkbox" id="match-word" checked />
+        Whole word
+      </label>
+      <span class="status" id="status">Loading index…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Matching records</h2>
+      <ul id="results"></ul>
+    </section>
+    <section id="detail">
+      <p class="empty">Select a record or search by code or product name.</p>
+    </section>
+  </main>
+
+  <script src="/app.js?v=8"></script>
+</body>
+</html>
