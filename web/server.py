@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import datetime
 import json
 import re
 import sqlite3
@@ -30,8 +31,11 @@ INDEX: list[dict] = []
 HTS_DB: dict[str, dict] = {}        # digits → {description, general_rate}
 CODE_AGREEMENT: dict[str, int] = {} # code → count of records containing it
 CUSMA_DB: dict[str, str] = {}       # code → description (confirmed CUSMA reference)
+CUSMA_LIST: list[dict] = []         # all CUSMA entries in order (preserves duplicates)
+APPROVALS: dict[str, dict] = {}     # str(id) → {code, note, ts}
 CROSS_CACHE: dict[str, list] = {}   # query → ruling list (in-memory cache)
 CA_TARIFF_DB: dict[str, dict] = {}  # digits → {description, mfn, ust, mxt, general_rate, uom}
+_APPROVALS_PATH = ROOT / "approvals.json"
 _CA_DB_PATH = ROOT / "ca_tariff.db"
 _DIGS = re.compile(r"[^\d]")
 
@@ -255,16 +259,38 @@ def search_cross(term: str, page_size: int = 15) -> tuple[list, str]:
 
 
 def load_cusma_csv() -> None:
-    global CUSMA_DB
+    global CUSMA_DB, CUSMA_LIST
     if not _CUSMA_CSV.is_file():
         return
+    entries: list[dict] = []
     with open(_CUSMA_CSV, encoding="utf-8-sig", newline="") as f:
         for row in csv.DictReader(f):
             code = (row.get("HS_Code") or "").strip()
             desc = (row.get("Description") or "").strip()
             if code:
                 CUSMA_DB[code] = desc
-    print(f"Loaded {len(CUSMA_DB)} CUSMA reference codes")
+                entries.append({"code": code, "description": desc})
+    CUSMA_LIST = sorted(entries, key=lambda e: e["description"].lower())
+    print(f"Loaded {len(CUSMA_DB)} CUSMA reference codes ({len(entries)} entries)")
+
+
+def load_approvals() -> None:
+    global APPROVALS
+    if not _APPROVALS_PATH.is_file():
+        return
+    with open(_APPROVALS_PATH, encoding="utf-8") as f:
+        APPROVALS = json.load(f)
+    print(f"Loaded {len(APPROVALS)} product approvals")
+
+
+def save_approval(product_id: int, code: str, note: str) -> None:
+    APPROVALS[str(product_id)] = {
+        "code": code,
+        "note": note,
+        "ts": datetime.datetime.utcnow().isoformat() + "Z",
+    }
+    with open(_APPROVALS_PATH, "w", encoding="utf-8") as f:
+        json.dump(APPROVALS, f, ensure_ascii=False, indent=2)
 
 
 def _parse_suggested_code(raw: str) -> str:
@@ -334,6 +360,7 @@ def load_data() -> None:
     load_hts_db()
     load_ca_tariff_db()
     load_cusma_csv()
+    load_approvals()
     INDEX = []
     global_id = 0
     for source, path in files:
@@ -438,10 +465,11 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(
                 {
                     "total": len(INDEX),
-                    "version": 7,
+                    "version": 8,
                     "text_search": True,
                     "word_search": True,
                     "has_products": any(r["source"] == "products" for r in INDEX),
+                    "has_cusma": bool(CUSMA_LIST),
                     "ca_tariff": bool(CA_TARIFF_DB),
                     "sources": by_source,
                     "files": [name for _, name in DATA_FILES],
@@ -516,6 +544,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "review_status": entry.get("review_status", ""),
                     "messages": [],
                     "enrichment": build_enrichment(entry["codes_all"]),
+                    "approved": APPROVALS.get(str(rid)),
                 })
                 return
             row = load_record(entry)
@@ -533,9 +562,78 @@ class Handler(SimpleHTTPRequestHandler):
             )
             return
 
+        if path == "/api/categories":
+            code_digits = lambda c: _DIGS.sub("", c)
+            cats = []
+            for entry in CUSMA_LIST:
+                code = entry["code"]
+                cd = code_digits(code)
+                enr = build_enrichment([code])
+                product_count = sum(
+                    1 for r in INDEX
+                    if r["source"] == "products" and any(
+                        code_digits(c).startswith(cd)
+                        for c in (r.get("codes_all") or [])
+                    )
+                )
+                cats.append({
+                    "code": code,
+                    "description": entry["description"],
+                    "enrichment": enr.get(code, {}),
+                    "product_count": product_count,
+                })
+            self._json({"categories": cats, "total": len(cats)})
+            return
+
+        if path == "/api/products":
+            q_raw = (qs.get("q") or [""])[0].strip().lower()
+            status_f = (qs.get("status") or [""])[0].strip()
+            code_f = (qs.get("code") or [""])[0].strip()
+            prods = [r for r in INDEX if r["source"] == "products"]
+            if q_raw:
+                prods = [p for p in prods if q_raw in (p.get("search_text") or "")]
+            if status_f:
+                prods = [p for p in prods if p.get("review_status") == status_f]
+            if code_f:
+                cf_digits = _DIGS.sub("", code_f)
+                prods = [p for p in prods if any(
+                    _DIGS.sub("", c).startswith(cf_digits)
+                    for c in (p.get("codes_all") or [])
+                )]
+            result = []
+            for p in prods:
+                row = {k: v for k, v in p.items()}
+                appr = APPROVALS.get(str(p["id"]))
+                if appr:
+                    row["approved"] = appr
+                result.append(row)
+            self._json({"products": result, "total": len(result)})
+            return
+
         if path == "/":
             self.path = "/index.html"
         return super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/api/approve":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                pid = int(body.get("id", -1))
+                code = str(body.get("code") or "").strip()
+                note = str(body.get("note") or "").strip()
+            except (ValueError, KeyError, json.JSONDecodeError):
+                self.send_error(400)
+                return
+            if pid < 0 or pid >= len(INDEX):
+                self.send_error(404)
+                return
+            save_approval(pid, code, note)
+            self._json({"ok": True, "id": pid, "code": code})
+            return
+        self.send_error(404)
 
     def _json(self, data: dict) -> None:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")

@@ -4,56 +4,110 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HTS Training Data Search</title>
-  <link rel="stylesheet" href="/styles.css?v=8" />
+  <link rel="stylesheet" href="/styles.css?v=9" />
 </head>
 <body>
   <header>
-    <h1>HTS training data search</h1>
-    <p class="subtitle">
-      <strong id="total-count">…</strong> records
-      <span id="source-summary"></span>
-      — search by HTS code or product / question text
-    </p>
-    <div class="search-row">
-      <input
-        id="search"
-        type="text"
-        placeholder="e.g. sign, zinc, 8477.10.9015"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <select id="source-filter" title="Dataset filter">
-        <option value="">All datasets</option>
-      </select>
-      <label class="match-toggle" title="Match whole words only (sign matches sign, not design)">
-        <input type="checkbox" id="match-word" checked />
-        Whole word
-      </label>
-      <span class="status" id="status">Loading index…</span>
-    </div>
-    <details class="search-tips">
-      <summary>Search tips</summary>
-      <div class="tips-grid">
-        <span class="tip-ex">tool wrench</span><span class="tip-desc">both words must appear (AND)</span>
-        <span class="tip-ex">"emergency tool"</span><span class="tip-desc">exact phrase match</span>
-        <span class="tip-ex">8204</span><span class="tip-desc">HTS code prefix — matches 8204.xx.xxxx</span>
-        <span class="tip-ex">8204 wrench</span><span class="tip-desc">code AND keyword combined</span>
-        <span class="tip-ex">*sign</span><span class="tip-desc">substring — matches warning sign, design…</span>
-        <span class="tip-ex">8204.12.0000</span><span class="tip-desc">exact HTS code</span>
+    <div class="header-top">
+      <div>
+        <h1>HTS training data search</h1>
+        <p class="subtitle">
+          <strong id="total-count">…</strong> records
+          <span id="source-summary"></span>
+          — search by HTS code or product / question text
+        </p>
       </div>
-    </details>
+    </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="search">Search</button>
+      <button class="tab-btn" data-tab="categories" id="tab-categories-btn">Categories</button>
+      <button class="tab-btn" data-tab="products" id="tab-products-btn" style="display:none">Products</button>
+    </nav>
   </header>
 
-  <main>
-    <section class="panel">
-      <h2>Matching records</h2>
-      <ul id="results"></ul>
-    </section>
-    <section id="detail">
-      <p class="empty">Select a record or search by code or product name.</p>
-    </section>
-  </main>
+  <!-- ── Search view ── -->
+  <div id="view-search" class="view">
+    <div class="view-toolbar">
+      <div class="search-row">
+        <input
+          id="search"
+          type="text"
+          placeholder="e.g. sign, zinc, 8477.10.9015"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <select id="source-filter" title="Dataset filter">
+          <option value="">All datasets</option>
+        </select>
+        <label class="match-toggle" title="Match whole words only (sign matches sign, not design)">
+          <input type="checkbox" id="match-word" checked />
+          Whole word
+        </label>
+        <span class="status" id="status">Loading index…</span>
+      </div>
+      <details class="search-tips">
+        <summary>Search tips</summary>
+        <div class="tips-grid">
+          <span class="tip-ex">tool wrench</span><span class="tip-desc">both words must appear (AND)</span>
+          <span class="tip-ex">"emergency tool"</span><span class="tip-desc">exact phrase match</span>
+          <span class="tip-ex">8204</span><span class="tip-desc">HTS code prefix — matches 8204.xx.xxxx</span>
+          <span class="tip-ex">8204 wrench</span><span class="tip-desc">code AND keyword combined</span>
+          <span class="tip-ex">*sign</span><span class="tip-desc">substring — matches warning sign, design…</span>
+          <span class="tip-ex">8204.12.0000</span><span class="tip-desc">exact HTS code</span>
+        </div>
+      </details>
+    </div>
+    <main>
+      <section class="panel">
+        <h2>Matching records</h2>
+        <ul id="results"></ul>
+      </section>
+      <section id="detail">
+        <p class="empty">Select a record or search by code or product name.</p>
+      </section>
+    </main>
+  </div>
 
-  <script src="/app.js?v=12"></script>
+  <!-- ── Categories view ── -->
+  <div id="view-categories" class="view" style="display:none">
+    <main>
+      <section class="panel">
+        <h2>CUSMA Categories <span id="cat-count"></span></h2>
+        <ul id="cat-list"></ul>
+      </section>
+      <section id="cat-detail">
+        <p class="empty">Select a category to see HTS enrichment, training records, and CBP rulings.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- ── Products view ── -->
+  <div id="view-products" class="view" style="display:none">
+    <div class="view-toolbar">
+      <div class="search-row">
+        <input id="prod-search" type="text" placeholder="Search products…"
+          class="prod-search-input" autocomplete="off" spellcheck="false" />
+        <select id="prod-status-filter" class="prod-status-filter">
+          <option value="">All statuses</option>
+          <option value="missing">No Code</option>
+          <option value="review">Needs Review</option>
+          <option value="unconfirmed">Unconfirmed</option>
+          <option value="confirmed">CUSMA Confirmed</option>
+        </select>
+        <span class="status" id="prod-status"></span>
+      </div>
+    </div>
+    <main>
+      <section class="panel">
+        <h2>Products <span id="prod-count"></span></h2>
+        <ul id="prod-list"></ul>
+      </section>
+      <section id="prod-detail">
+        <p class="empty">Select a product to view details and assign an approved code.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js?v=13"></script>
 </body>
 </html>
