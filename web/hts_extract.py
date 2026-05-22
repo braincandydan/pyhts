@@ -122,19 +122,30 @@ def is_code_query(query: str) -> bool:
     return bool(q) and sum(c.isdigit() for c in q) >= max(2, len(q) // 2)
 
 
+_QUERY_TOKEN = re.compile(r'"[^"]*"|\'[^\']*\'|\*?\S+')
+
+
+def parse_multi_query(query: str) -> list[str]:
+    """Split query into tokens, keeping quoted phrases together."""
+    q = query.strip()
+    if not q:
+        return []
+    return [t for t in _QUERY_TOKEN.findall(q) if t]
+
+
 def parse_text_query(query: str) -> tuple[str, bool]:
     """
-    Parse a text search query.
+    Parse a single search token.
     Returns (term, whole_word).
-    - Quoted "sign" -> whole word
-    - Plain sign -> whole word (avoids design, assign, …)
-    - Prefix *sign -> substring (sign anywhere)
+    - Quoted "phrase" -> substring (phrase match, may be multi-word)
+    - Plain word -> whole word
+    - *prefix -> substring
     """
     q = query.strip()
     if not q:
         return "", True
     if len(q) >= 2 and q[0] == q[-1] and q[0] in "\"'":
-        return q[1:-1].strip().lower(), True
+        return q[1:-1].strip().lower(), False
     if q.startswith("*"):
         return q[1:].strip().lower(), False
     if is_code_query(q):
@@ -143,6 +154,7 @@ def parse_text_query(query: str) -> tuple[str, bool]:
 
 
 def text_matches(search_text: str, query: str, match_mode: str = "auto") -> bool:
+    """Match a single token against search_text."""
     term, whole_word = parse_text_query(query)
     if match_mode == "word":
         whole_word = True

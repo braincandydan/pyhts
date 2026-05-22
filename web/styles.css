@@ -72,6 +72,47 @@ h1 {
   accent-color: var(--accent);
 }
 
+.search-tips {
+  margin-top: 0.65rem;
+}
+
+.search-tips summary {
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+}
+
+.search-tips summary:hover {
+  color: var(--text);
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 1rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tip-ex {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.78rem;
+  color: #93c5fd;
+  white-space: nowrap;
+}
+
+.tip-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .source-badge {
   display: inline-block;
   font-size: 0.65rem;
@@ -318,6 +359,162 @@ main {
 
 /* ── HTS code enrichment ─────────────────────────── */
 
+/* ── CBP CROSS rulings ───────────────────────────── */
+
+.cross-search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.cross-input {
+  flex: 1;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.cross-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.cross-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.cross-btn:hover:not(:disabled) { background: rgba(59, 130, 246, 0.28); }
+.cross-btn:disabled { opacity: 0.5; cursor: default; }
+
+.cross-row {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+  background: var(--surface);
+}
+
+.cross-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+
+.cross-num {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cross-date { color: var(--muted); }
+
+.cross-codes {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.7rem;
+  color: #4ade80;
+}
+
+.cross-ny, .cross-hq {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.cross-ny { background: rgba(59,130,246,0.15); color: #93c5fd; }
+.cross-hq { background: rgba(168,85,247,0.15); color: #c084fc; }
+
+.cross-subject {
+  font-size: 0.82rem;
+  color: var(--text);
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* ── Review status badges ────────────────────────── */
+
+.review-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.review-missing    { background: rgba(239, 68,  68,  0.18); color: #f87171; }
+.review-review     { background: rgba(251, 191,  36, 0.18); color: #fbbf24; }
+.review-confirmed  { background: rgba( 34, 197,  94, 0.18); color: #4ade80; }
+.review-unconfirmed{ background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+
+/* ── Product detail view ─────────────────────────── */
+
+.prod-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.prod-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.prod-field-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.prod-field-value {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.prod-notes {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.prod-actions {
+  margin-top: 1.25rem;
+}
+
+.search-link-btn {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.search-link-btn:hover {
+  background: rgba(59, 130, 246, 0.28);
+}
+
 .top-desc {
   font-size: 0.7rem;
   color: var(--muted);
@@ -357,6 +554,22 @@ main {
 .enrich-rate {
   font-size: 0.68rem;
   font-family: "Cascadia Code", "Consolas", monospace;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
+.enrich-ca-ust {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.enrich-ca-mfn {
+  font-size: 0.68rem;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   background: rgba(251, 191, 36, 0.12);

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HTS Training Data Search</title>
-  <link rel="stylesheet" href="/styles.css?v=4" />
+  <link rel="stylesheet" href="/styles.css?v=8" />
 </head>
 <body>
   <header>
@@ -31,6 +31,17 @@
       </label>
       <span class="status" id="status">Loading index…</span>
     </div>
+    <details class="search-tips">
+      <summary>Search tips</summary>
+      <div class="tips-grid">
+        <span class="tip-ex">tool wrench</span><span class="tip-desc">both words must appear (AND)</span>
+        <span class="tip-ex">"emergency tool"</span><span class="tip-desc">exact phrase match</span>
+        <span class="tip-ex">8204</span><span class="tip-desc">HTS code prefix — matches 8204.xx.xxxx</span>
+        <span class="tip-ex">8204 wrench</span><span class="tip-desc">code AND keyword combined</span>
+        <span class="tip-ex">*sign</span><span class="tip-desc">substring — matches warning sign, design…</span>
+        <span class="tip-ex">8204.12.0000</span><span class="tip-desc">exact HTS code</span>
+      </div>
+    </details>
   </header>
 
   <main>
@@ -43,6 +54,6 @@
     </section>
   </main>
 
-  <script src="/app.js?v=8"></script>
+  <script src="/app.js?v=12"></script>
 </body>
 </html>

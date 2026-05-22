@@ -55,6 +55,13 @@ if not exist "hts.db" (
     echo.
 )
 
+if not exist "ca_tariff.db" (
+    echo ca_tariff.db not found. Downloading Canadian Customs Tariff from CBSA...
+    "!PYTHON!" ca_tariff_fetch.py
+    if errorlevel 1 echo ca_tariff_fetch.py failed - continuing without Canadian rates.
+    echo.
+)
+
 :: ── 5. Kill old server and start fresh ───────────────────
 echo Stopping any old server on port 8765...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8765.*LISTENING"') do (
@@ -72,9 +79,9 @@ exit /b 0
 :: Check PATH first
 set PYTHON=
 where python >nul 2>&1
-if not errorlevel 1 (set PYTHON=python & goto :eof)
+if not errorlevel 1 (set "PYTHON=python" & goto :eof)
 where py >nul 2>&1
-if not errorlevel 1 (set PYTHON=py & goto :eof)
+if not errorlevel 1 (set "PYTHON=py" & goto :eof)
 :: Check common install locations (covers installs not yet on PATH)
 for %%v in (313 312 311 310 39 38) do (
     if exist "%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe" (

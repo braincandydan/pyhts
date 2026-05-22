@@ -3,3 +3,7 @@ __pycache__/
 *.pyo
 .DS_Store
 Thumbs.db
+
+# CBSA Canadian tariff fetch artifacts (rebuilt by ca_tariff_fetch.py)
+web/_ca_tariff_temp.zip
+web/_ca_tariff_extracted/
