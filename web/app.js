@@ -8,9 +8,10 @@ const statusEl       = document.getElementById("status");
 const totalCountEl   = document.getElementById("total-count");
 const sourceSummaryEl= document.getElementById("source-summary");
 
-let activeId      = null;
-let debounceTimer = null;
-let meta          = null;
+let activeId        = null;
+let debounceTimer   = null;
+let meta            = null;
+let cachedCategories= null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -326,8 +327,14 @@ function renderProductDetail(data, query) {
     ${notesHtml}
     ${approvedBanner}
     ${searchBtn}
+    <section class="codes-panel">
+      <h3>Browse CUSMA Codes</h3>
+      <div class="hts-tree" id="search-hts-tree"></div>
+    </section>
     ${crossPanelHtml(codes[0] || data.product || "")}
   `;
+  // Tree in search tab — clicking a code searches training data for it
+  attachHtsTree(document.getElementById("search-hts-tree"), code => searchForCode(code));
   initCrossPanel();
 }
 
@@ -415,15 +422,22 @@ matchWordToggle.addEventListener("change", () => { activeId = null; runSearch();
 
 let activeCategoryCode = null;
 
+async function getCategories() {
+  if (cachedCategories) return cachedCategories;
+  const res  = await fetch("/api/categories");
+  const data = await res.json();
+  cachedCategories = data.categories || [];
+  return cachedCategories;
+}
+
 async function loadCategories() {
   const catDetail = document.getElementById("cat-detail");
   catDetail.innerHTML = `<p class="empty">Loading categories…</p>`;
-  const res  = await fetch("/api/categories");
-  const data = await res.json();
+  const categories = await getCategories();
   categoriesLoaded = true;
   const countEl = document.getElementById("cat-count");
-  if (countEl) countEl.textContent = `(${data.total || 0})`;
-  renderCategoryList(data.categories || []);
+  if (countEl) countEl.textContent = `(${categories.length})`;
+  renderCategoryList(categories);
   catDetail.innerHTML = `<p class="empty">Select a category to see HTS enrichment, training records, and CBP rulings.</p>`;
 }
 
@@ -568,6 +582,85 @@ function renderCategoryDetail(cat, trainingMatches, products) {
   initCrossPanel();
 }
 
+// ── HTS code tree ────────────────────────────────────────────────────────────
+
+function buildHtsTree(categories) {
+  const chapterMap = {};
+  for (const cat of categories) {
+    const hier     = (cat.enrichment || {}).hierarchy || [];
+    const chapter  = hier.find(h => h.level === "chapter");
+    const heading  = hier.find(h => h.level === "heading");
+    const digits   = cat.code.replace(/[^\d]/g, "");
+    // Fall back to deriving chapter/heading from code digits when not in HTS_DB
+    const chCode   = chapter ? chapter.code : digits.slice(0, 2) || "??";
+    const chDesc   = chapter ? chapter.description : "";
+    const hdCode   = heading ? heading.code : (digits.length >= 4 ? digits.slice(0, 4) : chCode);
+    const hdDesc   = heading ? heading.description : "";
+    if (!chapterMap[chCode]) chapterMap[chCode] = { code: chCode, description: chDesc, headings: {} };
+    if (!chapterMap[chCode].headings[hdCode])
+      chapterMap[chCode].headings[hdCode] = { code: hdCode, description: hdDesc, leaves: [] };
+    chapterMap[chCode].headings[hdCode].leaves.push({
+      code:         cat.code,
+      description:  cat.description,
+      general_rate: (cat.enrichment || {}).general_rate || "",
+      ca_ust:       (cat.enrichment || {}).ca_ust || "",
+    });
+  }
+  return Object.values(chapterMap)
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map(ch => ({ ...ch, headings: Object.values(ch.headings).sort((a, b) => a.code.localeCompare(b.code)) }));
+}
+
+function htsTreeHtml(tree) {
+  return tree.map(chapter => {
+    const headingsHtml = chapter.headings.map(heading => {
+      const leavesHtml = heading.leaves.map(leaf => `
+        <li class="hts-leaf" data-code="${escapeHtml(leaf.code)}">
+          <span class="code-tag">${escapeHtml(leaf.code)}</span>
+          <span class="hts-leaf-name">${escapeHtml(leaf.description)}</span>
+          ${leaf.general_rate ? `<span class="enrich-rate">${escapeHtml(leaf.general_rate)}</span>` : ""}
+          ${leaf.ca_ust ? `<span class="enrich-ca-ust">CA UST: ${escapeHtml(leaf.ca_ust)}</span>` : ""}
+          <button class="hts-select-btn">↳ Use</button>
+        </li>`).join("");
+      // skip heading level if it's the same code as chapter
+      if (heading.code === chapter.code) return `<ul class="hts-leaves">${leavesHtml}</ul>`;
+      return `
+        <details class="hts-hd">
+          <summary class="hts-hd-summary">
+            <span class="hts-node-code">${escapeHtml(heading.code)}</span>
+            <span class="hts-node-desc">${escapeHtml(heading.description)}</span>
+          </summary>
+          <ul class="hts-leaves">${leavesHtml}</ul>
+        </details>`;
+    }).join("");
+    return `
+      <details class="hts-ch">
+        <summary class="hts-ch-summary">
+          <span class="hts-ch-num">Ch. ${escapeHtml(chapter.code)}</span>
+          <span class="hts-ch-desc">${escapeHtml(chapter.description)}</span>
+        </summary>
+        <div class="hts-ch-body">${headingsHtml}</div>
+      </details>`;
+  }).join("");
+}
+
+async function attachHtsTree(containerEl, onSelect) {
+  containerEl.innerHTML = `<p class="prod-notes muted" style="padding:0.35rem 0">Loading…</p>`;
+  const categories = await getCategories();
+  if (!categories.length) {
+    containerEl.innerHTML = `<p class="prod-notes muted">No CUSMA codes available.</p>`;
+    return;
+  }
+  const tree = buildHtsTree(categories);
+  containerEl.innerHTML = htsTreeHtml(tree);
+  containerEl.querySelectorAll(".hts-select-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      onSelect(btn.closest(".hts-leaf").dataset.code);
+    });
+  });
+}
+
 // ── Products tab ──────────────────────────────────────────────────────────────
 
 let activeProductId = null;
@@ -693,7 +786,7 @@ function renderApprovalDetail(data, p) {
     ${codeSection}
     ${p.review_notes ? `<section class="codes-panel"><h3>Review Notes</h3><p class="prod-notes">${escapeHtml(p.review_notes)}</p></section>` : ""}
     ${approvedBanner}
-    <section class="codes-panel approve-panel">
+    <section class="codes-panel approve-panel" id="approve-panel">
       <h3>Assign Approved Code</h3>
       <div class="approve-form">
         <input class="approve-input" id="approve-code-input" type="text"
@@ -704,11 +797,25 @@ function renderApprovalDetail(data, p) {
       </div>
       <p id="approve-status" class="prod-notes muted" style="margin-top:0.45rem;min-height:1.1em"></p>
     </section>
+    <section class="codes-panel">
+      <h3>Browse CUSMA Codes</h3>
+      <div class="hts-tree" id="prod-hts-tree"></div>
+    </section>
     <div class="prod-actions">
       <button class="search-link-btn" onclick="searchForCode(${searchVal})">${searchLabel}</button>
     </div>
     ${crossPanelHtml(currentCode || data.product || "")}
   `;
+
+  // Wire up tree — clicking a code fills the approval input
+  attachHtsTree(document.getElementById("prod-hts-tree"), code => {
+    const input = document.getElementById("approve-code-input");
+    if (input) {
+      input.value = code;
+      input.focus();
+      document.getElementById("approve-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
 
   const approveBtn    = document.getElementById("approve-btn");
   const approveInput  = document.getElementById("approve-code-input");
